@@ -1,8 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI,HTTPException
 from fastapi.responses import RedirectResponse
 import httpx
 import os
 from db.mongo import users_collection
+from models.user import UserLogin,UserRegister
+from utils.hashing import verify_password,hash_password
+from utils.jwt_handler import create_access_token
+from pymongo.errors import DuplicateKeyError
 
 app = FastAPI()
 
@@ -13,6 +17,37 @@ REDIRECT_URI = os.getenv("REDIRECT_URI")
 @app.get("/")
 def home():
     return {"message": "Go to /login to start OAuth flow"}
+
+@app.get("/login")
+async def login(user : UserLogin):
+    db_user = users_collection.find_one({"email": user.email})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(user.password, db_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token(data={"user_id": str(db_user["_id"])})
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.post("/register")
+async def register(user: UserRegister):
+    if users_collection.find_one({"email": user.email}):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = hash_password(user.password)
+    new_user = {
+        "email": user.email,
+        "password": hashed_password,
+    }
+
+    try:
+        users_collection.insert_one(new_user)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    return {"message": "User registered successfully"}
+
+
 
 @app.get("/connect/facebook")
 def login():
