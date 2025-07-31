@@ -1,11 +1,11 @@
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,Depends
 from fastapi.responses import RedirectResponse
 import httpx
 import os
 from db.mongo import users_collection
 from models.user import UserLogin,UserRegister
 from utils.hashing import verify_password,hash_password
-from utils.jwt_handler import create_access_token
+from utils.jwt_handler import create_access_token,verify_token
 from pymongo.errors import DuplicateKeyError
 
 app = FastAPI()
@@ -50,7 +50,7 @@ async def register(user: UserRegister):
 
 
 @app.get("/connect/facebook")
-def login():
+def connect_to_fb(user_data=Depends(verify_token)):
     fb_oauth_url = (
         "https://www.facebook.com/v19.0/dialog/oauth"
         f"?client_id={FB_CLIENT_ID}"
@@ -61,7 +61,9 @@ def login():
     return RedirectResponse(fb_oauth_url)
 
 @app.get("/oauth/callback")
-async def fb_callback(code: str):
+async def fb_callback(code: str ,user_data= Depends(verify_token)):
+    # test_email = "john@example.com"  # Use this for testing
+
     token_url = (
         f"https://graph.facebook.com/v19.0/oauth/access_token"
         f"?client_id={FB_CLIENT_ID}"
@@ -69,27 +71,37 @@ async def fb_callback(code: str):
         f"&client_secret={FB_CLIENT_SECRET}"
         f"&code={code}"
     )
-    
+
     async with httpx.AsyncClient() as client:
         token_res = await client.get(token_url)
         token_data = token_res.json()
-        access_token = token_data.get("access_token")
+        if token_res.status_code != 200 or "access_token" not in token_data:
+            raise HTTPException(status_code=400, detail="Failed to get Facebook access token")
 
+        access_token = token_data["access_token"]
+
+        # Get Facebook user info
         me_res = await client.get(
             f"https://graph.facebook.com/me?access_token={access_token}"
         )
         me = me_res.json()
+        if me_res.status_code != 200 or "id" not in me:
+            raise HTTPException(status_code=400, detail="Failed to fetch Facebook profile")
+
         fb_user_id = me["id"]
 
-        # Optional: fetch WABA info
-        # For now just store access token and ID
-        existing = users_collection.find_one({"fb_user_id": fb_user_id})
-        if not existing:
-            users_collection.insert_one({
-                "name": me.get("name", "FB User"),
-                "fb_user_id": fb_user_id,
-                "fb_access_token": access_token,
-                "loginMethod": "facebook"
-            })
-
-        return {"message": "Login successful!", "fb_user_id": fb_user_id}
+        # Update the test user's record
+        result = users_collection.update_one(
+            {"email": user_data["email"]},  
+            {
+                "$set": {
+                    "fb_user_id": fb_user_id,
+                    "fb_access_token": access_token,
+                    "name": me.get("name", "FB User"),
+                }
+            }
+        )
+        if result.modified_count:
+            return {"message": "Facebook account linked successfully!"}
+        else:
+            raise HTTPException(status_code=500, detail="User update failed")
