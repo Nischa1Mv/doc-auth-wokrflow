@@ -1,0 +1,19 @@
+# Ignore real environment files
+.env
+
+# Node / Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.env/  # If virtualenv is stored in .env folder (rare)
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
