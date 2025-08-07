@@ -1,4 +1,4 @@
-from fastapi import FastAPI,HTTPException,Depends
+from fastapi import FastAPI,HTTPException,Depends, Query
 from fastapi.responses import RedirectResponse
 import httpx
 import os
@@ -50,19 +50,22 @@ async def register(user: UserRegister):
 
 
 @app.get("/connect/facebook")
-def connect_to_fb(user_data=Depends(verify_token)):
+def connect_to_fb():
+# def connect_to_fb(user_data=Depends(verify_token)):
     fb_oauth_url = (
         "https://www.facebook.com/v19.0/dialog/oauth"
         f"?client_id={FB_CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}"
-        f"&scope=whatsapp_business_management,pages_messaging,business_management"
+        f"&scope=public_profile,pages_show_list,pages_manage_posts,business_management,whatsapp_business_management"
         f"&response_type=code"
     )
     return RedirectResponse(fb_oauth_url)
 
 @app.get("/oauth/callback")
-async def fb_callback(code: str ,user_data= Depends(verify_token)):
+async def fb_callback(code: str):
+# async def fb_callback(code: str ,user_data= Depends(verify_token)):
     # test_email = "john@example.com"  # Use this for testing
+    test_email = "sainischalmv@gmail.com"
 
     token_url = (
         f"https://graph.facebook.com/v19.0/oauth/access_token"
@@ -92,7 +95,8 @@ async def fb_callback(code: str ,user_data= Depends(verify_token)):
 
         # Update the test user's record
         result = users_collection.update_one(
-            {"email": user_data["email"]},  
+            # {"email": user_data["email"]},  
+            {"email": test_email},  
             {
                 "$set": {
                     "fb_user_id": fb_user_id,
@@ -105,3 +109,48 @@ async def fb_callback(code: str ,user_data= Depends(verify_token)):
             return {"message": "Facebook account linked successfully!"}
         else:
             raise HTTPException(status_code=500, detail="User update failed")
+
+@app.get("/get-businesses")
+async def get_businesses(access_token: str = Query(..., description="Facebook User Access Token")):
+    url = f"https://graph.facebook.com/v19.0/me/businesses?access_token={access_token}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        data = response.json()
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail=data.get("error", "Failed to fetch businesses"))
+
+        return {"businesses": data.get("data", [])}
+    
+#     {
+#     "businesses": [
+#         {
+#             "id": "770556238835682",
+#             "name": "Nischal Mantri"
+#         },
+#         {
+#             "id": "755449053761891",
+#             "name": "Nischal wokrplace"
+#         }
+#     ]
+# }
+
+
+@app.get("/get-waba-accounts")
+async def get_waba_accounts(
+    business_id: str = Query(..., description="Facebook Business ID"),
+    access_token: str = Query(..., description="Facebook User Access Token")
+):
+    url = f"https://graph.facebook.com/v19.0/{business_id}/client_whatsapp_business_accounts?access_token={access_token}"
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+
+    try:
+        data = response.json()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Facebook")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=data.get("error", "Failed to fetch WABA accounts"))
+
+    return {"waba_accounts": data.get("data", [])}
