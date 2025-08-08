@@ -140,7 +140,7 @@ async def get_waba_accounts(
     business_id: str = Query(..., description="Facebook Business ID"),
     access_token: str = Query(..., description="Facebook User Access Token")
 ):
-    url = f"https://graph.facebook.com/v19.0/{business_id}/client_whatsapp_business_accounts?access_token={access_token}"
+    url = f"https://graph.facebook.com/v19.0/{business_id}/owned_whatsapp_business_accounts?access_token={access_token}"
     
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
