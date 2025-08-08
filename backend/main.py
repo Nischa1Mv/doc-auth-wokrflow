@@ -154,3 +154,25 @@ async def get_waba_accounts(
         raise HTTPException(status_code=response.status_code, detail=data.get("error", "Failed to fetch WABA accounts"))
 
     return {"waba_accounts": data.get("data", [])}
+
+
+@app.post("/subscribe-wba")
+async def subscribe_waba(
+    wba_id: str = Query(..., description="WhatsApp Business Account ID"),
+    access_token: str = Query(..., description="Facebook User Access Token")
+):
+    url = f"https://graph.facebook.com/v19.0/{wba_id}/subscribed_apps?access_token={access_token}"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url)  # POST request
+
+    try:
+        data = response.json()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Meta API")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=data)
+
+    return data
+
