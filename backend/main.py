@@ -34,7 +34,7 @@ REDIRECT_URI = os.getenv("REDIRECT_URI")
 def home():
     return {"message": "Go to /login to start OAuth flow"}
 
-@app.get("/login")
+@app.post("/login")
 async def login(user : UserLogin):
     db_user = users_collection.find_one({"email": user.email})
     if not db_user:
