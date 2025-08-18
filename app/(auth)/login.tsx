@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { SafeAreaView, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Animated, {
-  FadeInRight,
-  FadeOutLeft,
+    FadeInRight,
+    FadeOutLeft,
 } from "react-native-reanimated";
 
 import LoginForm from "../../components/LoginForm";

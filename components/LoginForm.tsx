@@ -1,6 +1,6 @@
 import { BACKEND_URL } from "@/config";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { saveToken } from "../utils/storage";
 
 interface LoginResponse {
   access_token: string;
@@ -16,38 +17,42 @@ interface LoginResponse {
 }
 
 export default function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const handleLogin = async (): Promise<void> => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please fill all fields");
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(`${BACKEND_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+ const handleLogin = async (): Promise<void> => {
+  if (!email || !password) {
+    Alert.alert("Error", "Please fill all fields");
+    return;
+  }
+  setLoading(true);
 
-      const data: LoginResponse = await res.json();
-      if (!res.ok) throw new Error((data as any).detail || "Login failed");
+  try {
+    const res = await fetch(`${BACKEND_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-      await AsyncStorage.multiSet([
-        ["access_token", data.access_token],
-        ["token_type", data.token_type],
-      ]);
-      Alert.alert("Success", "Logged in! Please complete your social media setup.");
-      console.log("Access token:", data.access_token);
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const data: LoginResponse = await res.json();
+    if (!res.ok) throw new Error((data as any).detail || "Login failed");
+
+    // ✅ use secure storage (AsyncStorage on web, SecureStore on native)
+    await saveToken("access_token", data.access_token);
+    await saveToken("token_type", data.token_type);
+
+    console.log("Access token:", data.access_token);
+    Alert.alert("Success", "Logged in!");
+    router.replace("/(protected)");
+  } catch (err: any) {
+    Alert.alert("Error", err.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
     <View style={styles.form}>
       <Text style={styles.title}>Step 1: Login to Your Account</Text>

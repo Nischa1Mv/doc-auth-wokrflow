@@ -192,3 +192,40 @@ async def subscribe_waba(
 
     return data
 
+# VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN")
+
+# @app.get("/webhook")
+# async def verify_webhook(
+#     hub_mode: str = None,
+#     hub_challenge: str = None,
+#     hub_verify_token: str = None
+# ):
+#     if hub_mode == "subscribe" and hub_verify_token == VERIFY_TOKEN:
+#         return int(hub_challenge)
+#     raise HTTPException(status_code=403, detail="Verification failed")
+
+# # 📩 Handle incoming WhatsApp webhook events
+# @app.post("/webhook")
+# async def webhook_listener(request: Request):
+#     data = await request.json()
+
+#     print("\n===== 📩 Incoming Webhook =====")
+#     print(f"⏰ Timestamp: {datetime.utcnow().isoformat()} UTC")
+#     print(f"🔍 Raw Data: {data}")
+
+#     try:
+#         # WhatsApp messages are nested inside "entry"
+#         for entry in data.get("entry", []):
+#             for change in entry.get("changes", []):
+#                 value = change.get("value", {})
+#                 messages = value.get("messages", [])
+                
+#                 for msg in messages:
+#                     from_number = msg.get("from")
+#                     msg_body = msg.get("text", {}).get("body", "")
+#                     print(f"📨 Message from {from_number}: {msg_body}")
+
+#     except Exception as e:
+#         print("⚠️ Error parsing webhook:", e)
+
+#     return {"status": "received"}
