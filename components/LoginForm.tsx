@@ -1,5 +1,6 @@
 import { BACKEND_URL } from "@/config";
-import React, { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -35,19 +36,22 @@ export default function LoginForm() {
       const data: LoginResponse = await res.json();
       if (!res.ok) throw new Error((data as any).detail || "Login failed");
 
-      Alert.alert("Success", "Logged in!");
+      await AsyncStorage.multiSet([
+        ["access_token", data.access_token],
+        ["token_type", data.token_type],
+      ]);
+      Alert.alert("Success", "Logged in! Please complete your social media setup.");
       console.log("Access token:", data.access_token);
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <View style={styles.form}>
-      <Text style={styles.title}>Login</Text>
-      <Text style={styles.subtitle}>Welcome back! Please log in.</Text>
+      <Text style={styles.title}>Step 1: Login to Your Account</Text>
+      <Text style={styles.subtitle}>Welcome! Please log in to continue setup.</Text>
 
       <Text style={styles.label}>Email</Text>
       <TextInput
@@ -67,7 +71,7 @@ export default function LoginForm() {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+      <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} disabled={loading}>
         <Text style={styles.primaryButtonText}>
           {loading ? "Please wait..." : "Login"}
         </Text>
