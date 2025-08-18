@@ -1,4 +1,5 @@
 from fastapi import FastAPI,HTTPException,Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 import httpx
 import os
@@ -9,6 +10,21 @@ from utils.jwt_handler import create_access_token,verify_token
 from pymongo.errors import DuplicateKeyError
 
 app = FastAPI()
+
+# Allowed origins
+origins = [
+    "http://localhost:8081",   # Metro bundler / Expo web
+    "https://yourdomain.com",  # your frontend prod domain
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    # allow_origins=origins,
+    allow_origins=["*"],       
+    allow_credentials=True,
+    allow_methods=["*"],            # ["GET", "POST"] if you want to restrict
+    allow_headers=["*"],            # e.g. ["Authorization", "Content-Type"]
+)
 
 FB_CLIENT_ID = os.getenv("FB_CLIENT_ID")
 FB_CLIENT_SECRET = os.getenv("FB_CLIENT_SECRET")
